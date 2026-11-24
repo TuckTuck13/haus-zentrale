@@ -1013,7 +1013,7 @@
     const wbLichter = new Set(wallboxen().map(wb => wb.licht).filter(Boolean));
     const karten = alleBereiche.map(a => {
       const ids = alle().filter(e => bereichVon(e) === a.area_id && !(reg(e).hidden));
-      const lichter = ids.filter(e => e.startsWith('light.') && !wbLichter.has(e));
+      const lichter = ids.filter(e => e.startsWith('light.'));
       const szenen = ids.filter(e => e.startsWith('scene.'));
       const temp = ids.filter(e => e.startsWith('sensor.') && st(e).attributes.device_class === 'temperature' && nutzbar(e));
       const feuchte = ids.filter(e => e.startsWith('sensor.') && st(e).attributes.device_class === 'humidity' && nutzbar(e));
