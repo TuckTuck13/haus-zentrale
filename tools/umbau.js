@@ -20,8 +20,8 @@ async function zentraleUmbauen({dashboard = 'haus-zentrale', sicherung = 'zentra
 
   const v = p => JSON.parse(JSON.stringify(quelle.views.find(x => x.path === p) || {sections: []}));
   const grafik = (seite, extra) => ({type: 'grid', column_span: 4, cards: [{
-    type: 'iframe', url: `/local/zentrale/index.html?s=${seite}`, aspect_ratio: '62%', disable_sandbox: true,
-    grid_options: {columns: 'full'}, ...(extra || {})}]});
+    type: 'iframe', url: `/local/zentrale/index.html?s=${seite}`, disable_sandbox: true,
+    grid_options: {columns: 'full', rows: 'auto'}, ...(extra || {})}]});
   const trenner = (titel, text) => ({type: 'grid', column_span: 4, cards: [
     {type: 'heading', heading: titel, heading_style: 'title'}, ...(text ? [{type: 'markdown', content: text}] : [])]});
   const ansicht = (path, title, icon, sections) => ({path, title, icon, type: 'sections', max_columns: 4, sections});

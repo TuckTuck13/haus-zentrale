@@ -123,7 +123,7 @@
       const d = hass.devices[did] || {};
       return {
         id: did, ids,
-        name: (geraeteName(d) || 'Wallbox').replace(/^Wallbox\s+/i, ''),
+        name: (geraeteName(d) || 'Wallbox').replace(/^Wallbox\s+/i, '').replace(/\s*\(.*\)\s*$/, ''),
         bereich: d.area_id && hass.areas[d.area_id] ? hass.areas[d.area_id].name : '',
         status: f(/^sensor\.[a-z0-9_]+_status$/),
         leistung: f(/^sensor\.[a-z0-9_]+_leistung$/),
