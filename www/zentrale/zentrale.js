@@ -184,6 +184,7 @@
         if (!leist) continue;
         Object.assign(x, {art: 'stecker', leistung: leist, energie: f(/^sensor\.[a-z0-9_]+_energie$/), schalter: f(/^switch\./), neustart: f(/^button\.[a-z0-9_]+_neu_starten$/)});
         if (!x.name) x.name = nameVon(leist).replace(/ Leistung$/, '');
+        x.name = x.name.replace(/^Shelly\s+/i, '');
       }
       liste.push(x);
     }
@@ -241,7 +242,7 @@
   function uebersetze(t) {
     const m = {
       auto: 'Automatik', manual: 'Manuell', 'add. heat only': 'Nur Zusatzheizung', normal: 'Normal', low: 'Niedrig', high: 'Hoch',
-      'smart control': 'Smart', off: 'Aus', on: 'An', 'one time increase': 'Einmalig mehr', speed_1: 'Stufe 1', speed_2: 'Stufe 2',
+      'smart control': 'Smart', off: 'Aus', on: 'An', 'one time increase': 'Einmalig mehr', 'one-time increase': 'Einmalig mehr', lux: 'Luxus', 'speed 0': 'Aus', speed_1: 'Stufe 1', speed_2: 'Stufe 2',
       speed_3: 'Stufe 3', speed_4: 'Stufe 4', 'speed 1': 'Stufe 1', 'speed 2': 'Stufe 2', 'speed 3': 'Stufe 3', 'speed 4': 'Stufe 4',
       economy: 'Sparsam', comfort: 'Komfort', luxury: 'Luxus', 'from 3 hours': '3 Stunden', '3 hours': '3 Stunden', '6 hours': '6 Stunden',
       '12 hours': '12 Stunden', 'one time': 'Einmalig', preserve_charge: 'Reserve halten', charging: 'Lädt', discharging: 'Entlädt',
@@ -251,6 +252,9 @@
     };
     const k = String(t).toLowerCase();
     if (m[k]) return m[k];
+    let x;
+    if ((x = k.match(/^(\d+(?:\.\d+)?) ?kw$/))) return parseFloat(x[1]).toLocaleString('de-DE') + ' kW';
+    if ((x = k.match(/^(\d+) ?(hr|hrs|h|hours?)$/))) return x[1] + ' Std.';
     const s = String(t).replace(/_/g, ' ');
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
@@ -787,7 +791,12 @@
     const ab = t(E.abluft), fort = t(E.fortluft), zu = t(E.zuluft), luef = t(E.luefter);
     const prio = t(E.prio);
     const prioText = prio === 20 ? 'macht Warmwasser' : prio === 30 ? 'heizt' : prio === 40 ? 'heizt Pool' : prio === 60 ? 'kühlt' : hz > 0 ? 'läuft' : 'ruht';
-    const farbe = v => { if (v == null) return '#9aa4b2'; const f = Math.max(0, Math.min(1, (v - 20) / 35)); return `hsl(${Math.round(215 - f * 205)} 80% ${50 - f * 4}%)`; };
+    const farbe = v => {
+      if (v == null) return '#9aa4b2';
+      // kalt blau, Fußbodenheizung orange, heißes Wasser rot
+      const hue = v <= 25 ? 205 - Math.max(0, v - 15) / 10 * 160 : 45 - Math.min(1, (v - 25) / 25) * 42;
+      return `hsl(${Math.round(hue)} 85% 52%)`;
+    };
     const wwFill = wwO != null ? Math.max(0.1, Math.min(1, (wwO - 25) / 30)) : 0.3;
     const luftDauer = luef ? Math.max(0.3, 2.5 - luef / 45) : 0;
 
@@ -908,7 +917,7 @@
       const verbunden = wbVerbunden(wb);
       const status = s ? (WB_TEXT[s.state] || uebersetze(s.state)) : KA;
       const grund = wb.grund && nutzbar(wb.grund) && !laedt && verbunden ? uebersetze(st(wb.grund).state) : '';
-      const auto = `<svg viewBox="0 0 300 120" style="width:100%;display:block">
+      const auto = `<svg viewBox="0 0 300 120" style="width:100%;max-width:460px;display:block;margin:0 auto">
         <rect x="0" y="104" width="300" height="6" rx="3" fill="var(--line)"/>
         <rect x="14" y="20" width="22" height="86" rx="5" fill="var(--text)" opacity=".85"/>
         <rect x="18" y="28" width="14" height="22" rx="4" fill="${laedt ? '#00d2ff' : verbunden ? '#7ee787' : '#7a828e'}" ${laedt ? 'class="puls"' : ''}/>
