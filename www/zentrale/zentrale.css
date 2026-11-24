@@ -128,3 +128,14 @@ button { font: inherit; color: inherit; }
   .karte { padding: 13px; }
   .raster { grid-template-columns: 1fr; }
 }
+
+.raumkarte.hell { background: linear-gradient(180deg, color-mix(in srgb, var(--glow) 22%, var(--card)), var(--card) 60%); }
+.lampe { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.lampe:first-of-type { border-top: 0; }
+.birne { width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; flex: none; background: var(--card2); color: var(--muted); transition: all .25s; }
+.lampe.an .birne { background: var(--farbe); color: #5a3d00; box-shadow: 0 0 0 4px color-mix(in srgb, var(--farbe) 30%, transparent), 0 0 24px color-mix(in srgb, var(--farbe) 70%, transparent); }
+.lampe.weg { opacity: .5; }
+.lampe-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lampe-text .n { font-weight: 600; cursor: pointer; }
+.lampe-text .s { color: var(--muted); font-size: 13px; }
+.lampe-text input[type=range] { width: 100%; margin-top: 6px; accent-color: #f0b429; }

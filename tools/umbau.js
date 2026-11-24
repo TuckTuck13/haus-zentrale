@@ -53,7 +53,7 @@ async function zentraleUmbauen({dashboard = 'haus-zentrale', sicherung = 'zentra
 
   const neu = {...quelle, views: [
     ansicht('uebersicht', 'Zuhause', 'mdi:home-heart', [grafik('haus'), trenner('Alle Statuswerte'), ...v('uebersicht').sections]),
-    ansicht('licht', 'Räume & Licht', 'mdi:lightbulb-group', [...raeume, trenner('Hue und Bewegungsmelder'), ...v('licht').sections]),
+    ansicht('licht', 'Räume & Licht', 'mdi:lightbulb-group', [grafik('raeume'), trenner('Alle Geräte nach Räumen'), ...raeume, trenner('Hue und Bewegungsmelder'), ...v('licht').sections]),
     ansicht('energie', 'Energie', 'mdi:solar-power-variant', [grafik('energie'), trenner('Werte und Speichersteuerung'), ...v('energie').sections]),
     ansicht('heizung', 'Wärme & Luft', 'mdi:heat-pump', [grafik('waerme'), trenner('Fachwerte und Experten-Einstellungen'), ...v('heizung').sections]),
     ansicht('wallboxen', 'Mobilität', 'mdi:ev-station', [grafik('mobil'), trenner('Alle Wallbox-Werte'), ...v('wallboxen').sections]),

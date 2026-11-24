@@ -1005,9 +1005,58 @@
       ${stecker.length ? `<div class="abstand"></div><h2 style="margin:4px 6px 10px;font-size:16px">Strommessung an Steckdosen</h2><div class="raster">${stecker.map(steckerKarte).join('')}</div>` : ''}`;
   }
 
+
+  // ---------------------------------------------------------------- Seite: Räume
+
+  function seiteRaeume() {
+    const alleBereiche = Object.values(hass.areas || {}).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const wbLichter = new Set(wallboxen().map(wb => wb.licht).filter(Boolean));
+    const karten = alleBereiche.map(a => {
+      const ids = alle().filter(e => bereichVon(e) === a.area_id && !(reg(e).hidden));
+      const lichter = ids.filter(e => e.startsWith('light.') && !wbLichter.has(e));
+      const szenen = ids.filter(e => e.startsWith('scene.'));
+      const temp = ids.filter(e => e.startsWith('sensor.') && st(e).attributes.device_class === 'temperature' && nutzbar(e));
+      const feuchte = ids.filter(e => e.startsWith('sensor.') && st(e).attributes.device_class === 'humidity' && nutzbar(e));
+      const bewegung = ids.filter(e => e.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence'].includes(st(e).attributes.device_class));
+      if (!lichter.length && !szenen.length && !temp.length) return '';
+      const an = lichter.filter(e => st(e).state === 'on').length;
+      const jemand = bewegung.some(e => st(e).state === 'on');
+      const lampe = e => {
+        const z = st(e), istAn = z.state === 'on', weg = z.state === 'unavailable';
+        const hell = istAn && z.attributes.brightness != null ? Math.round(z.attributes.brightness / 2.55) : (istAn ? 100 : 0);
+        const rgb = istAn && z.attributes.rgb_color ? `rgb(${z.attributes.rgb_color.join(',')})` : '#ffcf4a';
+        const name = nameVon(e).replace(new RegExp('^' + a.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '') || nameVon(e);
+        const dimmbar = (z.attributes.supported_color_modes || []).some(m => m !== 'onoff');
+        return `<div class="lampe ${istAn ? 'an' : ''} ${weg ? 'weg' : ''}">
+          <button class="birne" style="--farbe:${rgb}" ${weg ? 'disabled' : ''} aria-label="${esc(name)} schalten"
+            data-dienst='${esc(JSON.stringify(['light', 'toggle', {entity_id: e}]))}'>
+            <svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2Zm-3 18a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1Z" fill="currentColor"/></svg></button>
+          <div class="lampe-text"><span class="n" data-mehr="${e}">${esc(name)}</span>
+            <span class="s">${weg ? 'nicht erreichbar' : istAn ? (dimmbar ? hell + ' %' : 'an') : 'aus'}</span>
+            ${dimmbar && !weg ? `<input type="range" min="1" max="100" value="${hell || 1}" data-licht="${e}" aria-label="Helligkeit ${esc(name)}">` : ''}</div>
+        </div>`;
+      };
+      return `<div class="karte raumkarte ${an ? 'hell' : ''}" id="raum-${esc(a.area_id)}">
+        <h2>${esc(a.name)}${jemand ? '<span class="chip info" style="padding:2px 8px;font-size:12px;cursor:default"><span class="p"></span>jemand da</span>' : ''}
+          <span class="mehr" style="color:var(--muted);cursor:default">${temp.length ? ft(zahl(temp[0])) : ''}${feuchte.length ? ' · ' + fz(zahl(feuchte[0]), 0) + ' %' : ''}</span></h2>
+        ${lichter.map(lampe).join('')}
+        ${szenen.length ? `<div class="chips" style="margin-top:10px">${szenen.map(e => `<button class="chip" data-dienst='${esc(JSON.stringify(['scene', 'turn_on', {entity_id: e}]))}'><span class="p" style="background:var(--glow)"></span>${esc(nameVon(e).replace(new RegExp('^(' + a.name + '\\s*)+', 'i'), ''))}</button>`).join('')}</div>` : ''}
+        ${lichter.length > 1 ? `<div class="knoepfe" style="margin-top:10px"><button class="knopf" data-dienst='${esc(JSON.stringify(['light', an ? 'turn_off' : 'turn_on', {entity_id: lichter}]))}'>${an ? 'Alles aus' : 'Alles an'}</button></div>` : ''}
+      </div>`;
+    }).join('');
+    const anGesamt = findeAlle(/^light\./).filter(e => st(e).state === 'on' && !wbLichter.has(e)).length;
+    return `<div class="kopf"><div><h1>Räume &amp; Licht</h1><div class="unter">${anGesamt ? `${anGesamt} Licht${anGesamt === 1 ? '' : 'er'} an` : 'Alle Lichter sind aus.'} Tippe auf eine Lampe zum Schalten, der Regler dimmt.</div></div></div>
+      <div class="raster">${karten}</div>`;
+  }
+
+  document.addEventListener('change', ev => {
+    const el = ev.target;
+    if (el.dataset && el.dataset.licht) dienst('light', 'turn_on', {entity_id: el.dataset.licht, brightness_pct: parseInt(el.value, 10)}).catch(alarm);
+  });
+
   // ---------------------------------------------------------------- Zeichnen und Bedienen
 
-  const SEITEN = {haus: seiteHaus, energie: seiteEnergie, waerme: seiteWaerme, mobil: seiteMobil, haushalt: seiteHaushalt};
+  const SEITEN = {haus: seiteHaus, raeume: seiteRaeume, energie: seiteEnergie, waerme: seiteWaerme, mobil: seiteMobil, haushalt: seiteHaushalt};
 
   function zeichne() {
     if (!hass) return;
@@ -1015,10 +1064,17 @@
     let html;
     try { html = fn(); } catch (e) { console.error(e); html = `<div class="karte">Diese Ansicht konnte nicht gezeichnet werden: ${esc(e.message)}</div>`; }
     if (html === letztesHtml) return;
+    if (document.activeElement && document.activeElement.type === 'range') return;
     letztesHtml = html;
     app.className = '';
     app.innerHTML = html;
     passeAn();
+    const anker = P.location.hash.slice(1);
+    if (anker && anker !== zeichne.anker) {
+      zeichne.anker = anker;
+      const ziel = document.getElementById('raum-' + decodeURIComponent(anker));
+      if (ziel) setTimeout(() => ziel.scrollIntoView({behavior: 'smooth', block: 'center'}), 300);
+    }
   }
 
   function passeAn() {
