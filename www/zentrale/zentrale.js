@@ -362,9 +362,9 @@
     const updates = findeAlle(/^update\./).filter(e => st(e).state === 'on');
     if (updates.length) m.push({art: 'info', text: updates.length === 1 ? '1 Update verfügbar' : updates.length + ' Updates verfügbar', nav: 'admin', id: updates[0]});
     const offen = zahl('sensor.aliaswacht_offen');
-    if (offen) m.push({art: 'warn', text: offen === 1 ? 'Aliaswacht: 1 Alias wartet auf dich' : `Aliaswacht: ${offen} Aliasse warten auf dich`, nav: 'sicherheit'});
+    if (offen) m.push({art: 'warn', text: offen === 1 ? 'Aliaswacht: 1 Alias wartet auf dich' : `Aliaswacht: ${offen} Aliasse warten auf dich`, nav: 'kameras'});
     const verd = zahl('sensor.aliaswacht_verdaechtig');
-    if (verd) m.push({art: 'bad', text: `Aliaswacht: ${verd} mögliches Datenleck`, nav: 'sicherheit'});
+    if (verd) m.push({art: 'bad', text: `Aliaswacht: ${verd} mögliches Datenleck`, nav: 'kameras'});
     for (const g of hausgeraete()) {
       if (g.art === 'stecker') continue;
       const l = geraetLage(g);
@@ -474,7 +474,7 @@
           const x = x0 + i * (bw + gap);
           const an = r.an.length > 0;
           const t = r.temp != null ? fz(r.temp, 1) + '°' : '';
-          return `<g class="klick raum" data-nav="raeume" data-anker="${esc(r.id)}">
+          return `<g class="klick raum" data-nav="licht" data-anker="${esc(r.id)}">
             <rect x="${x}" y="${y}" width="${bw}" height="${hoehe}" rx="8" fill="${an ? 'url(#licht)' : fensterAus}" ${an ? 'filter="url(#schein)"' : ''} stroke="${h.tag ? '#b9c6d3' : '#0b1222'}" stroke-width="2"/>
             <line x1="${x + bw / 2}" y1="${y + 4}" x2="${x + bw / 2}" y2="${y + hoehe - 30}" stroke="${an ? '#f0b94a' : (h.tag ? '#b9c6d3' : '#0b1222')}" stroke-width="2"/>
             ${r.bewegung ? `<circle cx="${x + bw - 12}" cy="${y + 12}" r="5" fill="#2f6fde" class="puls"/>` : ''}
@@ -524,7 +524,7 @@
       const laedt = p > 50;
       const lichtAn = wb.licht && st(wb.licht) && st(wb.licht).state === 'on';
       const label = laedt ? 'lädt ' + fw(p) : (s ? (WB_TEXT[s.state] || uebersetze(s.state)) : KA);
-      return `<g class="klick" data-nav="mobil">
+      return `<g class="klick" data-nav="wallboxen">
         <rect x="${x}" y="440" width="16" height="78" rx="4" fill="${h.tag ? '#2b2f36' : '#11151b'}"/>
         <rect x="${x + 3}" y="446" width="10" height="16" rx="3" fill="${lichtAn ? (laedt ? '#00d2ff' : '#7ee787') : '#4a515c'}" ${laedt ? 'class="puls"' : ''}/>
         ${verbunden ? autoSvg(x + 22, i ? '#c0392b' : '#3a6ea5') + `<path d="M${x + 13} 470 Q${x + 22} 500 ${x + 30} 486" stroke="#111" stroke-width="3" fill="none"/>` :
@@ -567,7 +567,7 @@
       </g>
 
       <!-- Außeneinheit Wärmepumpe -->
-      <g class="klick" data-nav="waerme">
+      <g class="klick" data-nav="heizung">
         <rect x="112" y="452" width="104" height="66" rx="8" fill="${h.tag ? '#e9edf2' : '#59606d'}" stroke="${h.tag ? '#aab4c0' : '#2c313a'}" stroke-width="2"/>
         <circle cx="146" cy="485" r="24" fill="${h.tag ? '#cfd6df' : '#3d434e'}"/>
         <g class="${kompHz > 0 ? 'dreh' : ''}" style="animation-duration:${kompHz > 0 ? Math.max(0.25, 2.2 - kompHz / 50).toFixed(2) : 0}s">
@@ -621,13 +621,13 @@
 
     const kacheln = [
       {nav: 'energie', farbe: 'var(--sun)', titel: 'Energie', zeile: en.pv > 0 ? `Sonne ${fw(en.pv)}, Haus ${fw(en.haus)}` : `Haus ${fw(en.haus)}`, zeile2: `Batterie ${en.soc != null ? Math.round(en.soc) + ' %' : KA}`},
-      {nav: 'waerme', farbe: 'var(--heat)', titel: 'Wärme & Luft', zeile: `Innen ${ft(raumT)}`, zeile2: `Warmwasser ${ft(ww)}`},
-      {nav: 'mobil', farbe: 'var(--car)', titel: 'Mobilität', zeile: wbs.map(wb => `${kurz(wb.name, 70)}: ${(watt(wb.leistung) || 0) > 50 ? 'lädt' : (WB_TEXT[(st(wb.status) || {}).state] || 'k. A.')}`).join(', ') || 'Keine Wallbox', zeile2: ''},
+      {nav: 'heizung', farbe: 'var(--heat)', titel: 'Wärme & Luft', zeile: `Innen ${ft(raumT)}`, zeile2: `Warmwasser ${ft(ww)}`},
+      {nav: 'wallboxen', farbe: 'var(--car)', titel: 'Mobilität', zeile: wbs.map(wb => `${kurz(wb.name, 70)}: ${(watt(wb.leistung) || 0) > 50 ? 'lädt' : (WB_TEXT[(st(wb.status) || {}).state] || 'k. A.')}`).join(', ') || 'Keine Wallbox', zeile2: ''},
       {nav: 'haushalt', farbe: '#9b5de5', titel: 'Haushalt', zeile: laufend.length ? laufend.map(x => x.g.name).join(', ') + ' läuft' : 'Alles ruht', zeile2: ''},
-      {nav: 'raeume', farbe: 'var(--glow)', titel: 'Räume & Licht', zeile: lichterAn.length ? `${lichterAn.length} Licht${lichterAn.length === 1 ? '' : 'er'} an` : 'Alle Lichter aus', zeile2: ''},
+      {nav: 'licht', farbe: 'var(--glow)', titel: 'Räume & Licht', zeile: lichterAn.length ? `${lichterAn.length} Licht${lichterAn.length === 1 ? '' : 'er'} an` : 'Alle Lichter aus', zeile2: ''},
       {nav: 'netzwerk', farbe: 'var(--accent)', titel: 'Netzwerk', zeile: 'Datenwege und Geräte', zeile2: ''},
       {nav: 'server', farbe: '#475467', titel: 'Server & NAS', zeile: serverZeile(), zeile2: ''},
-      {nav: 'sicherheit', farbe: 'var(--bad)', titel: 'Sicherheit', zeile: aliasZeile(), zeile2: 'Kameras und Aliaswacht'},
+      {nav: 'kameras', farbe: 'var(--bad)', titel: 'Sicherheit', zeile: aliasZeile(), zeile2: 'Kameras und Aliaswacht'},
     ];
 
     return `
@@ -644,7 +644,7 @@
           <button class="knopf" data-dienst='${esc(JSON.stringify(['light', 'turn_off', {entity_id: findeAlle(/^light\./).filter(e => !wbs.some(wb => wb.licht === e))}]))}' ${lichterAn.length ? '' : 'disabled'}>Alle Lichter aus</button>
           ${E.wwExtra ? `<button class="knopf ${st(E.wwExtra).state !== 'Off' ? 'an' : ''}" data-dienst='${esc(JSON.stringify(['select', 'select_option', {entity_id: E.wwExtra, option: (st(E.wwExtra).attributes.options || []).find(o => o !== 'Off') || 'Off'}]))}'>Warmwasser extra</button>` : ''}
           ${wbs.filter(wb => wb.licht).length ? `<button class="knopf" data-dienst='${esc(JSON.stringify(['light', 'toggle', {entity_id: wbs.filter(wb => wb.licht).map(wb => wb.licht)}]))}'>Wallbox-Licht umschalten</button>` : ''}
-          <button class="knopf" data-nav="raeume">Licht &amp; Szenen</button>
+          <button class="knopf" data-nav="licht">Licht &amp; Szenen</button>
         </div></div>
       </div>
       <div class="abstand"></div>
@@ -698,13 +698,13 @@
       ${knoten(90, 75, 42, 'var(--sun)', '☀️', 'Sonne', fw(en.pv), `data-mehr="${E.pvAc || ''}"`)}
       ${knoten(70, 190, 42, 'var(--grid)', '🔌', en.bezug > 20 ? 'Netzbezug' : en.einspeisung > 20 ? 'Einspeisung' : 'Netz', fw(en.bezug > 20 ? en.bezug : en.einspeisung || 0), `data-mehr="${E.netz || ''}"`)}
       ${knoten(90, 305, 42, 'var(--bat)', '🔋', 'Batterie ' + (en.soc != null ? Math.round(en.soc) + ' %' : ''), en.batP > 50 ? '+' + fw(en.batP) : en.batP < -50 ? '−' + fw(-en.batP) : 'ruht', `data-mehr="${E.soc || ''}"`)}
-      <g class="klick" data-nav="raeume"><circle cx="${H.x}" cy="${H.y}" r="62" fill="var(--card)" stroke="var(--accent)" stroke-width="5"/>
+      <g class="klick" data-nav="licht"><circle cx="${H.x}" cy="${H.y}" r="62" fill="var(--card)" stroke="var(--accent)" stroke-width="5"/>
         <text x="${H.x}" y="${H.y - 14}" text-anchor="middle" font-size="28">🏠</text>
         <text x="${H.x}" y="${H.y + 16}" text-anchor="middle" font-size="19" font-weight="700" fill="var(--text)">${fw(en.haus)}</text>
         <text x="${H.x}" y="${H.y + 34}" text-anchor="middle" font-size="12" fill="var(--muted)">Verbrauch gesamt</text></g>
       ${knoten(570, 75, 42, 'var(--accent)', '💡', 'Haushalt', fw(en.rest), 'data-nav="haushalt"')}
-      ${knoten(595, 190, 42, 'var(--heat)', '♨️', 'Wärmepumpe', fw(en.wp), 'data-nav="waerme"')}
-      ${knoten(570, 305, 42, 'var(--car)', '🚗', 'Autos', fw(en.autos), 'data-nav="mobil"')}
+      ${knoten(595, 190, 42, 'var(--heat)', '♨️', 'Wärmepumpe', fw(en.wp), 'data-nav="heizung"')}
+      ${knoten(570, 305, 42, 'var(--car)', '🚗', 'Autos', fw(en.autos), 'data-nav="wallboxen"')}
     </svg>`;
 
     // Batterie groß
