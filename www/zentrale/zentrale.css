@@ -44,6 +44,8 @@ button { font: inherit; color: inherit; }
 .karte h2 { font-size: 15px; margin: 0 0 10px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
 .karte h2 .mehr { margin-left: auto; font-size: 13px; font-weight: 500; color: var(--accent); cursor: pointer; }
 .raster { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.raster.kacheln { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 900px) { .raster.kacheln { grid-template-columns: repeat(2, 1fr); } }
 .raster.klein { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .abstand { height: 12px; }
 

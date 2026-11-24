@@ -45,9 +45,9 @@ async function zentraleUmbauen({dashboard = 'haus-zentrale', sicherung = 'zentra
 
   const aliaswacht = S['sensor.aliaswacht_offen'] ? [{type: 'grid', cards: [
     {type: 'heading', heading: 'Aliaswacht', icon: 'mdi:email-lock'},
-    ...['offen', 'freigegeben', 'gesperrt', 'verdaechtig'].filter(k => S['sensor.aliaswacht_' + k]).map(k => ({type: 'tile', entity: 'sensor.aliaswacht_' + k, grid_options: {columns: 6}, tap_action: {action: 'navigate', navigation_path: '/aliaswacht'}})),
+    ...['offen', 'freigegeben', 'gesperrt', 'verdaechtig'].filter(k => S['sensor.aliaswacht_' + k]).map(k => ({type: 'tile', entity: 'sensor.aliaswacht_' + k, grid_options: {columns: 6}, tap_action: {action: 'navigate', navigation_path: '/aliaswacht-uebersicht'}})),
     {type: 'tile', entity: 'sensor.aliaswacht_status', grid_options: {columns: 12}},
-    {type: 'button', name: 'Aliasse entscheiden', icon: 'mdi:gavel', tap_action: {action: 'navigate', navigation_path: '/aliaswacht'}, grid_options: {columns: 6, rows: 2}},
+    {type: 'button', name: 'Aliasse entscheiden', icon: 'mdi:gavel', tap_action: {action: 'navigate', navigation_path: '/aliaswacht-uebersicht'}, grid_options: {columns: 6, rows: 2}},
     ...(S['sensor.aliaswacht_status'].attributes.url ? [{type: 'button', name: 'Aliaswacht öffnen', icon: 'mdi:open-in-new', tap_action: {action: 'url', url_path: S['sensor.aliaswacht_status'].attributes.url}, grid_options: {columns: 6, rows: 2}}] : []),
   ]}] : [];
 

@@ -8,7 +8,7 @@
 
   const P = window.parent;
   const app = document.getElementById('app');
-  const SEITE = new URLSearchParams(location.search).get('s') || 'haus';
+  const SEITE = window.ZENTRALE_SEITE || new URLSearchParams(location.search).get('s') || 'haus';
   let hass = null;
   let letzterHass = null;
   let letztesHtml = '';
@@ -123,7 +123,7 @@
       const d = hass.devices[did] || {};
       return {
         id: did, ids,
-        name: geraeteName(d) || 'Wallbox',
+        name: (geraeteName(d) || 'Wallbox').replace(/^Wallbox\s+/i, ''),
         bereich: d.area_id && hass.areas[d.area_id] ? hass.areas[d.area_id].name : '',
         status: f(/^sensor\.[a-z0-9_]+_status$/),
         leistung: f(/^sensor\.[a-z0-9_]+_leistung$/),
@@ -515,6 +515,13 @@
       <path d="M38 8 L48 8 L48 20 L28 20Z M54 8 L76 8 Q82 8 86 14 L92 20 L54 20Z" fill="${h.tag ? '#dff1ff' : '#22304f'}"/>
       <circle cx="28" cy="46" r="10" fill="#1f2328"/><circle cx="28" cy="46" r="4" fill="#9aa4b2"/>
       <circle cx="94" cy="46" r="10" fill="#1f2328"/><circle cx="94" cy="46" r="4" fill="#9aa4b2"/></g>`;
+    const pill = (x, y, text, farbe, anker) => {
+      const breite = text.length * 7.2 + 22;
+      const x0 = anker === 'end' ? x - breite : anker === 'middle' ? x - breite / 2 : x;
+      return `<rect x="${x0}" y="${y - 15}" width="${breite}" height="24" rx="12" fill="${h.tag ? 'rgba(255,255,255,.9)' : 'rgba(10,16,30,.75)'}" stroke="${farbe}" stroke-width="1.5"/>
+        <text x="${x0 + breite / 2}" y="${y + 1}" text-anchor="middle" font-size="12.5" font-weight="650" fill="${textHell}">${esc(text)}</text>`;
+    };
+
     const wbX = [770, 880];
     const autos = wbs.slice(0, 2).map((wb, i) => {
       const x = wbX[i];
@@ -530,17 +537,11 @@
         ${verbunden ? autoSvg(x + 22, i ? '#c0392b' : '#3a6ea5') + `<path d="M${x + 13} 470 Q${x + 22} 500 ${x + 30} 486" stroke="#111" stroke-width="3" fill="none"/>` :
           `<rect x="${x + 24}" y="470" width="80" height="44" rx="10" fill="none" stroke="${h.tag ? '#6b7a5c' : '#546150'}" stroke-dasharray="6 6" stroke-width="2"/>`}
         ${laedt ? `<path d="M${x + 76} 472 l-8 14 h8 l-6 14 l16 -18 h-8 l6 -10z" fill="#ffe14d" class="puls"/>` : ''}
-        <rect x="${x - 4}" y="412" width="${Math.max(96, label.length * 7 + 16)}" height="22" rx="11" fill="${h.tag ? 'rgba(255,255,255,.85)' : 'rgba(10,16,30,.72)'}"/>
-        <text x="${x + 4}" y="427" font-size="12" font-weight="600" fill="${textHell}">${esc(kurz(wb.name, 60))}: ${esc(label)}</text>
+        ${pill(x + 60, 404, wb.name, '#00a2c7', 'middle')}
+        <text x="${x + 60}" y="434" text-anchor="middle" font-size="12" font-weight="600" fill="${textHell}">${esc(label)}</text>
       </g>`;
     }).join('');
 
-    const pill = (x, y, text, farbe, anker) => {
-      const breite = text.length * 7.2 + 22;
-      const x0 = anker === 'end' ? x - breite : anker === 'middle' ? x - breite / 2 : x;
-      return `<rect x="${x0}" y="${y - 15}" width="${breite}" height="24" rx="12" fill="${h.tag ? 'rgba(255,255,255,.9)' : 'rgba(10,16,30,.75)'}" stroke="${farbe}" stroke-width="1.5"/>
-        <text x="${x0 + breite / 2}" y="${y + 1}" text-anchor="middle" font-size="12.5" font-weight="650" fill="${textHell}">${esc(text)}</text>`;
-    };
 
     const batFill = Math.max(0, Math.min(100, en.soc || 0));
     const batTxt = en.batP > 50 ? 'lädt ' + fw(en.batP) : en.batP < -50 ? 'gibt ' + fw(-en.batP) : 'ruht';
@@ -615,14 +616,14 @@
 
     const ms = meldungen();
     const laufend = hausgeraete().filter(g => g.art !== 'stecker').map(g => ({g, l: geraetLage(g)})).filter(x => x.l.laeuft);
-    const lichterAn = findeAlle(/^light\./).filter(e => st(e).state === 'on');
+    const lichterAn = findeAlle(/^light\./).filter(e => st(e).state === 'on' && !wbs.some(wb => wb.licht === e));
     const ww = zahl(E.wwOben), raumT = zahl(E.raum);
     const pers = findeAlle(/^person\./);
 
     const kacheln = [
       {nav: 'energie', farbe: 'var(--sun)', titel: 'Energie', zeile: en.pv > 0 ? `Sonne ${fw(en.pv)}, Haus ${fw(en.haus)}` : `Haus ${fw(en.haus)}`, zeile2: `Batterie ${en.soc != null ? Math.round(en.soc) + ' %' : KA}`},
       {nav: 'heizung', farbe: 'var(--heat)', titel: 'Wärme & Luft', zeile: `Innen ${ft(raumT)}`, zeile2: `Warmwasser ${ft(ww)}`},
-      {nav: 'wallboxen', farbe: 'var(--car)', titel: 'Mobilität', zeile: wbs.map(wb => `${kurz(wb.name, 70)}: ${(watt(wb.leistung) || 0) > 50 ? 'lädt' : (WB_TEXT[(st(wb.status) || {}).state] || 'k. A.')}`).join(', ') || 'Keine Wallbox', zeile2: ''},
+      {nav: 'wallboxen', farbe: 'var(--car)', titel: 'Mobilität', zeile: wbs.map(wb => `${wb.name}: ${(watt(wb.leistung) || 0) > 50 ? 'lädt' : (WB_TEXT[(st(wb.status) || {}).state] || 'k. A.')}`).join(', ') || 'Keine Wallbox', zeile2: ''},
       {nav: 'haushalt', farbe: '#9b5de5', titel: 'Haushalt', zeile: laufend.length ? laufend.map(x => x.g.name).join(', ') + ' läuft' : 'Alles ruht', zeile2: ''},
       {nav: 'licht', farbe: 'var(--glow)', titel: 'Räume & Licht', zeile: lichterAn.length ? `${lichterAn.length} Licht${lichterAn.length === 1 ? '' : 'er'} an` : 'Alle Lichter aus', zeile2: ''},
       {nav: 'netzwerk', farbe: 'var(--accent)', titel: 'Netzwerk', zeile: 'Datenwege und Geräte', zeile2: ''},
@@ -648,7 +649,7 @@
         </div></div>
       </div>
       <div class="abstand"></div>
-      <div class="raster klein">${kacheln.map(k => `<div class="karte klick" data-nav="${k.nav}" style="cursor:pointer;border-top:4px solid ${k.farbe}">
+      <div class="raster kacheln">${kacheln.map(k => `<div class="karte klick" data-nav="${k.nav}" style="cursor:pointer;border-top:4px solid ${k.farbe}">
         <h2>${esc(k.titel)}</h2><div>${esc(k.zeile)}</div>${k.zeile2 ? `<div class="hinweis">${esc(k.zeile2)}</div>` : ''}</div>`).join('')}</div>`;
   }
 
