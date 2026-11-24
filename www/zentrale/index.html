@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zentrale</title>
+</head>
+<body>
+<div id="app" class="laden"></div>
+<script>
+// Lädt CSS und JS immer in der aktuellen Version, damit kein alter Stand im Cache hängen bleibt.
+fetch('version.txt', {cache: 'no-store'}).then(r => r.ok ? r.text() : '0').catch(() => '0').then(v => {
+  v = encodeURIComponent(v.trim());
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'zentrale.css?v=' + v; document.head.appendChild(l);
+  const s = document.createElement('script'); s.src = 'zentrale.js?v=' + v; document.body.appendChild(s);
+});
+</script>
+</body>
+</html>
