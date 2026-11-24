@@ -139,3 +139,5 @@ button { font: inherit; color: inherit; }
 .lampe-text .n { font-weight: 600; cursor: pointer; }
 .lampe-text .s { color: var(--muted); font-size: 13px; }
 .lampe-text input[type=range] { width: 100%; margin-top: 6px; accent-color: #f0b429; }
+
+.raster.grundriss { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }

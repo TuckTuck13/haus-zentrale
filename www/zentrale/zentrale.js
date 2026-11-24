@@ -642,6 +642,7 @@
       </div>
       <div class="karte" style="padding:0;overflow:hidden">${szene}</div>
       <div class="abstand"></div>
+      ${grundrissKarte()}
       <div class="raster">
         <div class="karte"><h2>Jetzt wichtig</h2><div class="chips">${ms.length ? ms.map(m => chip(m.art, m.text, m.nav ? `data-nav="${m.nav}"` : (m.id ? `data-mehr="${m.id}"` : ''))).join('') : chip('ok', 'Alles in Ordnung', 'data-nav="server"')}
           ${laufend.map(x => chip('info', x.g.name + (x.l.rest != null ? ' noch ' + dauer(x.l.rest) : ' läuft'), 'data-nav="haushalt"')).join('')}</div></div>
@@ -1006,6 +1007,74 @@
   }
 
 
+
+  // ---------------------------------------------------------------- Grundriss
+  // Der Grundriss liegt nicht im Repo, sondern privat in Home Assistant
+  // (verstecktes Dashboard "zentrale-grundriss", Schlüssel "grundriss").
+
+  let grundriss, grundrissGeladen = false;
+  async function ladeGrundriss() {
+    if (grundrissGeladen) return;
+    grundrissGeladen = true;
+    try {
+      const c = await hass.callWS({type: 'lovelace/config', url_path: 'zentrale-grundriss'});
+      grundriss = c && c.grundriss;
+    } catch (e) { grundriss = null; }
+    letztesHtml = '';
+    zeichne();
+  }
+
+  function etageSvg(et) {
+    const [bx, by, bw, bh] = et.box;
+    const pkt = r => r.punkte.map(p => p.join(',')).join(' ');
+    const mitte = r => [r.punkte.reduce((s, p) => s + p[0], 0) / r.punkte.length, r.punkte.reduce((s, p) => s + p[1], 0) / r.punkte.length];
+    const wpLaeuft = (zahl(E.kompressor) || 0) > 0;
+    const teile = et.raeume.map(r => {
+      const [cx, cy] = mitte(r);
+      const area = r.bereich && hass.areas && hass.areas[r.bereich];
+      const name = area ? area.name : r.name;
+      const ids = area ? alle().filter(e => bereichVon(e) === r.bereich) : [];
+      const lichter = ids.filter(e => e.startsWith('light.'));
+      const an = lichter.filter(e => st(e).state === 'on');
+      const hell = an.length ? Math.max(...an.map(e => st(e).attributes.brightness != null ? st(e).attributes.brightness / 255 : 1)) : 0;
+      const temp = ids.filter(e => e.startsWith('sensor.') && st(e).attributes.device_class === 'temperature' && nutzbar(e)).map(zahl).filter(v => v != null);
+      const jemand = ids.some(e => e.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence'].includes(st(e).attributes.device_class) && st(e).state === 'on');
+      let fuell = 'var(--card2)', aktion = '', unter = '';
+      if (r.art === 'treppe') {
+        fuell = 'var(--card)';
+      } else if (r.art === 'technik') {
+        aktion = 'data-nav="heizung"';
+        unter = (wpLaeuft ? 'Wärmepumpe läuft' : 'Wärmepumpe ruht') + (E.wwOben ? ' · WW ' + fz(zahl(E.wwOben), 0) + '°' : '');
+      }
+      if (lichter.length) {
+        aktion = `data-dienst='${esc(JSON.stringify(['light', an.length ? 'turn_off' : 'turn_on', {entity_id: lichter}]))}'`;
+        unter = an.length ? `${an.length} von ${lichter.length} Licht${lichter.length === 1 ? '' : 'ern'} an` : (lichter.length === 1 ? 'Licht aus' : `${lichter.length} Lichter aus`);
+      }
+      if (an.length) fuell = `rgba(255, 196, 61, ${(0.35 + hell * 0.5).toFixed(2)})`;
+      const schrift = r.art === 'treppe' ? 15 : 22;
+      return `<g class="${aktion ? 'klick' : ''}" ${aktion}>
+        <polygon points="${pkt(r)}" fill="${fuell}" ${an.length ? 'filter="url(#gschein)"' : ''} stroke="var(--line)" stroke-width="2"/>
+        ${r.art === 'treppe' ? Array.from({length: 9}, (_, i) => `<line x1="${r.punkte[0][0]}" x2="${r.punkte[1][0]}" y1="${r.punkte[0][1] + (i + 1) * (r.punkte[2][1] - r.punkte[0][1]) / 10}" y2="${r.punkte[0][1] + (i + 1) * (r.punkte[2][1] - r.punkte[0][1]) / 10}" stroke="var(--line)" stroke-width="2"/>`).join('') : ''}
+        ${an.length ? `<circle cx="${cx}" cy="${cy - 48}" r="16" fill="#ffd34d"/><circle cx="${cx}" cy="${cy - 48}" r="28" fill="#ffd34d" opacity=".3"/>` : (lichter.length ? `<circle cx="${cx}" cy="${cy - 48}" r="12" fill="none" stroke="var(--muted)" stroke-width="3"/>` : '')}
+        ${jemand ? `<circle cx="${cx + 60}" cy="${cy - 48}" r="9" fill="var(--accent)" class="puls"/>` : ''}
+        <text x="${cx}" y="${cy}" text-anchor="middle" font-size="${schrift}" font-weight="650" fill="var(--text)">${esc(name)}</text>
+        ${temp.length ? `<text x="${cx}" y="${cy + 28}" text-anchor="middle" font-size="20" fill="var(--text)">${fz(temp[0], 1)} °C</text>` : ''}
+        ${unter ? `<text x="${cx}" y="${cy + (temp.length ? 54 : 28)}" text-anchor="middle" font-size="16" fill="var(--muted)">${esc(unter)}</text>` : ''}
+      </g>`;
+    }).join('');
+    const aussen = et.aussen ? `<polygon points="${et.aussen.map(p => p.join(',')).join(' ')}" fill="none" stroke="var(--text)" stroke-width="14" stroke-linejoin="round" opacity=".85"/>` : '';
+    const texte = (et.texte || []).map(t => `<text x="${t.x}" y="${t.y}" text-anchor="middle" font-size="${t.klein ? 16 : 20}" fill="var(--muted)">${esc(t.text)}</text>`).join('');
+    return `<svg class="szene" viewBox="${bx} ${by - 20} ${bw} ${bh + 20}" role="img" aria-label="Grundriss ${esc(et.name)}">
+      <defs><filter id="gschein" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      ${teile}${aussen}${texte}</svg>`;
+  }
+
+  function grundrissKarte() {
+    ladeGrundriss();
+    if (!grundriss || !grundriss.etagen) return '';
+    return `<div class="raster grundriss">${grundriss.etagen.map(et => `<div class="karte"><h2>${esc(et.name)}<span class="mehr" style="color:var(--muted);cursor:default">Raum antippen schaltet das Licht</span></h2>${etageSvg(et)}</div>`).join('')}</div><div class="abstand"></div>`;
+  }
+
   // ---------------------------------------------------------------- Seite: Räume
 
   function seiteRaeume() {
@@ -1046,6 +1115,7 @@
     }).join('');
     const anGesamt = findeAlle(/^light\./).filter(e => st(e).state === 'on' && !wbLichter.has(e)).length;
     return `<div class="kopf"><div><h1>Räume &amp; Licht</h1><div class="unter">${anGesamt ? `${anGesamt} Licht${anGesamt === 1 ? '' : 'er'} an` : 'Alle Lichter sind aus.'} Tippe auf eine Lampe zum Schalten, der Regler dimmt.</div></div></div>
+      ${grundrissKarte()}
       <div class="raster">${karten}</div>`;
   }
 
